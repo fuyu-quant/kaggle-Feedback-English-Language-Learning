@@ -6,3 +6,5 @@ sentencepiece
 tqdm
 fugashi
 unidic
+# 8bit optimizer
+bitsandbytes-cuda112
