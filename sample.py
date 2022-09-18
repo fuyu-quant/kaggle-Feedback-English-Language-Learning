@@ -93,8 +93,8 @@ class FB3_Dataset(Dataset):
 """ Model """
 class Model(nn.Module):
     def __init__(self, cfg):
+        super(Model, cfg).__init__()
         self.cfg = cfg
-
         self.backbone = AutoModel.from_pretrained(self.cfg.model.model_name)
         self.config = AutoConfig.from_pretrained(self.cfg.model.model_name)
         # 新しい単語の追加，https://qiita.com/m__k/items/e620bc14fba7a4e36824
