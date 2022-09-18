@@ -2,7 +2,7 @@ from omegaconf import DictConfig, OmegaConf
 
 import hydra
 @hydra.main(config_name="config")
-def my_app(cfg: DictConfig) -> None:
+def main(cfg: DictConfig) -> None:
     print(OmegaConf.to_yaml(cfg))
 
 
