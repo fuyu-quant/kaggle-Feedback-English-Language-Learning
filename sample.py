@@ -234,7 +234,7 @@ class AWP:
 
 """ training function """
 def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, 
-             valid_dataloader, best_score = np.inf, fold = 0):
+             valid_dataloader, best_score = np.inf, fold):
     '''
     val_df: the validation dataframe after re-organizing
     valid: the validation dataframe before re-organizing
@@ -484,9 +484,8 @@ def main(cfg: DictConfig) -> None:
                      tags= cfg.model.model_name,
                      name=f'{cfg.model.model_name}-fold{fold}-{cfg.setting.column}-{cfg.setting.text}',
                      anonymous='allow')
-
-    for fold in cfg.setting.num_folds:
-        training_loop(cfg, fold)
+    training_loop(cfg, fold)
+    run.finish() 
 
 
 
