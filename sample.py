@@ -234,7 +234,7 @@ class AWP:
 
 """ training function """
 def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, 
-             valid_dataloader, best_score = np.inf, fold):
+             valid_dataloader, best_score = np.inf, fold = 0):
     '''
     val_df: the validation dataframe after re-organizing
     valid: the validation dataframe before re-organizing
