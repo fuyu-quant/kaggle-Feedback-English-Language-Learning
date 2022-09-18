@@ -5,5 +5,7 @@ tqdm
 bitsandbytes-cuda112
 # yamlファイルの読み込み
 pyyaml
+# hydra
+hydra-core
 # wandb
 wandb
