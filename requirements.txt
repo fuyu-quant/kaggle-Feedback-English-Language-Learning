@@ -1,12 +1,9 @@
-torch>=1.7.1
-transformers>=4.5.0
-tensorflow
-tensorboard
+transformers
 sentencepiece
 tqdm
-fugashi
-unidic
 # 8bit optimizer
 bitsandbytes-cuda112
 # yamlファイルの読み込み
 pyyaml
+# wandb
+wandb

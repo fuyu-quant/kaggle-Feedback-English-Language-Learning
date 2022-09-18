@@ -116,8 +116,6 @@ class FB3_Dataset(Dataset):
 
 
 """ Model """
-
-
 class Model(nn.Module):
     def __init__(self, cfg):
         super(Model, cfg).__init__()

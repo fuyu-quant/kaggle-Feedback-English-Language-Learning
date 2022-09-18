@@ -1,2 +1,47 @@
 setting:
+  competition_name : 'FeedbackPrize3'
+  text : "sample"
   seed : 3655
+  column : 'cohesion'
+  #setting : conventions'
+  num_classes : 1
+  device : 'cuda:0'
+  fold : 0
+  num_folds : 4
+  use_tqdm : True
+  data_path : "/content/drive/MyDrive/Colab Notebooks/kaggle/Feedback_Prize_3/make_dataset/"
+  model_save_path : '/content/drive/MyDrive/Colab Notebooks/kaggle/Feedback_Prize_3/model/'
+  num_epochs : 3
+  max_length : 512
+  train_batch_size : 4
+  valid_batch_size : 16 
+
+
+model:
+  model_name: 'microsoft/deberta-large'
+  gradient_checkpointing: False
+  apex : False
+  gradient_accumulations_steps : 1
+  use_awp : False
+  start_awp_epoch : 1
+  valid_start : 0
+  valid_frequency : 20
+
+optimizer:
+  optimizer_name: None
+  # 全てのパラメータを最適化するか
+  all_optimize : True
+  # 8bit-optimizerの設定
+  bnb_8bit : True
+  weight_decay : 0.05
+  lr : 1e-5
+  eps : None
+  betas : None
+
+scheduler:
+  scheduler_name : None
+  T_max : 10
+  min_lr : 10
+  T_0 : 10
+  num_warmup_steps : 100
+  num_train_steps : 100
