@@ -356,6 +356,8 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
 
         if (global_step + 1) % cfg.model.valid_frequency == 0 and global_step >= valid_start:
             valid_score = valid_fn(cfg, model, valid_dataloader)
+            print(f"Validation Loss : {valid_score}")
+            wandb.log({"Valid score": score})
 
             if valid_score <= best_score:
                 print(f"Validation Loss Improved ({best_score} ---> {valid_score})")
@@ -400,9 +402,6 @@ def valid_fn(cfg, model, dataloader):
 
         if cfg.setting.use_tqdm:
             vbar.set_description('Batch loss: {:.4f}'.format(score))
-
-        wandb.log({"Valid score": score})
-        print(f"Validation Loss : {score}")
 
         #bar.set_postfix(Valid_Loss=epoch_v_loss)
         torch.cuda.empty_cache()
