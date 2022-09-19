@@ -155,7 +155,7 @@ class Model(nn.Module):
             loss = self.criterion(outputs, label)
         else:
             loss = None
-        return loss, outputs
+        return loss #, outputs
         
 
 
@@ -273,7 +273,7 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, valid_da
 
         optimizer.zero_grad()
 
-        batch_loss, _ = model(input_ids, attention_mask, target)
+        batch_loss = model(input_ids, attention_mask, target)
         batch_loss.backward()
         optimizer.step()
 
