@@ -247,7 +247,7 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
     # AWPの設定
     if cfg.model.use_awp:
         start_awp = cfg.model.start_awp * math.floor(tra_len/cfg.setting.train_batch_size)
-        awp = AWP(model, optimizer, scaler = scaler)
+        awp = AWP(cfg, model, optimizer, scaler = scaler)
 
     # tqdmの設定
     if cfg.setting.use_tqdm:
