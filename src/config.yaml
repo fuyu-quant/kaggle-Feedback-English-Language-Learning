@@ -14,7 +14,7 @@ setting:
   num_epochs : 2
   max_length : 512
   train_batch_size : 2
-  valid_batch_size : 4
+  valid_batch_size : 2
 
 
 wandb:
