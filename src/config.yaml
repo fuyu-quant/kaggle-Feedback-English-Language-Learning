@@ -18,7 +18,7 @@ setting:
 wandb:
   project : 'Feedback3'
   tags : 'sample'
-  yaml_path : 'config.yaml'
+  yaml_path : '/content/GitHub/src/config.yaml'
 
 
 model:
