@@ -33,7 +33,7 @@ model:
   # 1epoch目の何割学習をしてからvalidationを始めるか(0~1)の間で設定
   start_valid : 0.6
   # 何ミニバッチに1回，validationをするか
-  valid_frequency : 10
+  valid_frequency : 20
 
 
 optimizer:

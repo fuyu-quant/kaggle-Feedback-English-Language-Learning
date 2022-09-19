@@ -329,7 +329,7 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
                 torch.save(model.state_dict(), model_path)
                 print("Model Saved")
          
-    return 
+    return global_step, loss, total_samples
 
 
 
@@ -468,9 +468,12 @@ def training_loop(cfg, fold):
     global_step = 0
 
     for epoch in range(1, cfg.setting.num_epochs + 1): 
-        train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, 
-                valid_dataloader, fold, tra_len, loss, total_samples, global_step,
-                best_score = np.inf)
+        g_step, epoch_loss, t_samples = train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, 
+                                valid_dataloader, fold, tra_len, loss, total_samples, global_step,
+                                best_score = np.inf)
+        global_step = g_step
+        loss = epoch_loss
+        total_samples = t_samples
     del model, optimizer, scheduler
     torch.cuda.empty_cache()
     gc.collect()
