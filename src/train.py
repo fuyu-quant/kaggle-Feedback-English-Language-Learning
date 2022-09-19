@@ -246,11 +246,9 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
             valid_dataloader, fold, tra_len, loss, total_samples, global_step,
             best_score = np.inf):
     
-    wandb.log({"epoch": epoch})
+ 
     # validationをはじめる時の値の設定
     valid_start = cfg.model.valid_start * math.floor(tra_len/cfg.setting.train_batch_size)
-    # 学習時の累積の損失をサンプル数で割った値
-    #start = end = time.time()
 
     # apexの設定
     if cfg.model.apex:
@@ -349,7 +347,7 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
         if (global_step + 1) % cfg.model.valid_frequency == 0 and global_step >= valid_start:
             valid_score = valid_fn(cfg, model, valid_dataloader)
             print(f"Validation Loss : {valid_score}")
-            wandb.log({"Valid score": valid_score})
+            wandb.log({"valid_score": valid_score})
 
             if valid_score <= best_score:
                 print(f"Validation Loss Improved ({best_score} ---> {valid_score})")
@@ -371,8 +369,13 @@ def valid_fn(cfg, model, dataloader):
 
     valid_size = 0
     validation_loss = 0.0
+
+    if cfg.setting.use_tqdm:
+        vbar = tqdm(dataloader)
+    else:
+        vbar = dataloader
     
-    for i, item in dataloader:
+    for i, item in vbar:
         input_ids = item['input_ids'].to(cfg.setting.device)
         attention_mask = item['attention_mask'].to(cfg.setting.device)
         #token_type_ids = item['token_type_ids'].to(cfg.device)
