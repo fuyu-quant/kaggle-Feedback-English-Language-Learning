@@ -287,7 +287,7 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
  
 
         # awpの設定
-        if cfg.use_awp and global_step >= start_awp:
+        if cfg.model.use_awp and global_step >= start_awp:
             awp.attack_backward(item)
         
 
