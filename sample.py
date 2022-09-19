@@ -22,6 +22,10 @@ from transformers import AutoModel, AutoTokenizer, AutoConfig, AdamW
 from transformers import get_linear_schedule_with_warmup, get_cosine_schedule_with_warmup
 from transformers import DataCollatorWithPadding
 
+# transformersの警告を出力しないようにする
+from transformers import logging
+logging.set_verbosity_warning()
+
 # 8bit-optimizer
 import bitsandbytes as bnb
 
@@ -113,7 +117,7 @@ class Model(nn.Module):
 
         self._init_weights(self.Linear)
 
-
+"""
     def _init_weights(self, module):
         if isinstance(module, nn.Linear):
             module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
@@ -126,6 +130,8 @@ class Model(nn.Module):
         elif isinstance(module, nn.LayerNorm):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
+
+"""
 
     def criterion(self, pred, true):
         loss = nn.MSELoss(pred, true)
