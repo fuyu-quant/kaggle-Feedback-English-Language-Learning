@@ -259,7 +259,7 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, valid_da
     else:
         tbar = train_dataloader
         
-    val_schedule = [int(i) for i in list(np.linspace(1, len(tbar), num = int(1 / cfg.val_check_interval) + 1, endpoint = True))[1:]]
+    #val_schedule = [int(i) for i in list(np.linspace(1, len(tbar), num = int(1 / cfg.val_check_interval) + 1, endpoint = True))[1:]]
 
     for i, item in enumerate(tbar):
         model.train()
