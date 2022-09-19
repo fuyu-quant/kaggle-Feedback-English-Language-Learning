@@ -239,20 +239,19 @@ class AWP:
 
 """ training function """
 def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, valid_dataloader, fold, best_score = np.inf):
-    '''
-    val_df: the validation dataframe after re-organizing
-    valid: the validation dataframe before re-organizing
-    '''
-    # Set up for training
-    scaler = GradScaler(enabled = cfg.model.apex)   # Enable APEX
+    
     loss = 0
     total_samples = 0
     global_step = 0
     #start = end = time.time()
 
-    if cfg.model.use_awp:
+    # apexの設定
+    scaler = GradScaler(enabled = cfg.model.apex)
+
+    # AWPの設定
+    #if cfg.model.use_awp:
         # Initialize AWP
-        awp = AWP(model, optimizer, adv_lr = cfg.adv_lr, adv_eps = cfg.adv_eps, start_step = cfg.start_awp_epoch, scaler = scaler)
+    #    awp = AWP(model, optimizer, adv_lr = cfg.adv_lr, adv_eps = cfg.adv_eps, start_step = cfg.start_awp_epoch, scaler = scaler)
 
     if cfg.setting.use_tqdm:
         tbar = tqdm(train_dataloader)
@@ -263,13 +262,16 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, valid_da
 
     for i, item in enumerate(tbar):
         model.train()
-        # Set up inputs
+
         input_ids = item['input_ids'].to(cfg.setting.device)
         attention_mask = item['attention_mask'].to(cfg.setting.device)
+        # token_type_idsは文のペアを入力する時に使う(https://qiita.com/Dash400air/items/a616ef8d088e003dfd4c)
         #token_type_ids = item['token_type_ids'].to(cfg.device)
         target = item['target'].to(cfg.setting.device)
         
         batch_size = input_ids.shape[0]
+
+        optimizer.zero_grad()
 
         #batch_loss, _ = model(input_ids, attention_mask, target)
         #loss.backward()
@@ -284,15 +286,20 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, valid_da
             batch_loss = batch_loss / cfg.model.gradient_accumulations_steps
 
         # Backward
-        scaler.scale(batch_loss).backward()       
+        scaler.scale(batch_loss).backward()
+        scaler.step(optimizer)
+        scaler.update()      
         
-        if cfg.use_awp and epoch >= cfg.start_awp_epoch:
+        #if cfg.use_awp and epoch >= cfg.start_awp_epoch:
             #if epoch == cfg.start_awp_epoch and i == 0:
                 #logging.info(' Start AWP '.center(50, '-'))
-            if (i + 1) % cfg.model.gradient_accumulation_steps == 0:
-                awp.attack_backward(item, epoch)
+        #    if (i + 1) % cfg.model.gradient_accumulation_steps == 0:
+        #        awp.attack_backward(item, epoch)
         
         
+        # スケジューラーの設定
+        if scheduler is not None:
+            scheduler.step()
 
         
 
@@ -306,12 +313,12 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, valid_da
 
 
         #grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.max_grad_norm)
-        if (i + 1) % cfg.model.gradient_accumulation_steps == 0:
-            scaler.step(optimizer)
-            scaler.update()
-            global_step += 1
-            scheduler.step()
-            optimizer.zero_grad()
+        #if (i + 1) % cfg.model.gradient_accumulation_steps == 0:
+        #    scaler.step(optimizer)
+        #    scaler.update()
+        #    global_step += 1
+        #    scheduler.step()
+        #    optimizer.zero_grad()
             """
             if swa_model is not None:
                 swa_model.update_parameters(model)
