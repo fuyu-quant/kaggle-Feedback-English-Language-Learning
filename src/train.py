@@ -165,17 +165,9 @@ class Model(nn.Module):
 
 """ AWP """
 class AWP:
-    def __init__(
-        self,
-        model,
-        optimizer,
-        adv_param = 'weight',
-        adv_lr = 1,
-        adv_eps = 0.2,
-        start_step = 0,
-        adv_step = 1,
-        scaler = None
-    ):
+    def __init__(self, cfg, model, optimizer, adv_param = 'weight', adv_lr = 1, 
+                adv_eps = 0.2, start_step = 0, adv_step = 1, scaler = None):
+        self.cfg = cfg
         self.model = model
         self.optimizer = optimizer
         self.adv_param = adv_param
@@ -194,11 +186,11 @@ class AWP:
         self._save()
         for i in range(self.adv_step):
             self._attack_step() 
-            with autocast(enabled = cfg.model.apex):
-                input_ids = batch['input_ids'].to(cfg.setting.device)
-                attention_mask = batch['attention_mask'].to(cfg.setting.device)
-                token_type_ids = batch['token_type_ids'].to(cfg.setting.device)
-                labels = batch['labels'].to(cfg.setting.device)
+            with autocast(enabled = self.cfg.model.apex):
+                input_ids = batch['input_ids'].to(self.cfg.setting.device)
+                attention_mask = batch['attention_mask'].to(self.cfg.setting.device)
+                #token_type_ids = batch['token_type_ids'].to(cfg.setting.device)
+                labels = batch['labels'].to(self.cfg.setting.device)
                 adv_loss, _  = self.model(input_ids, attention_mask, labels)
                 adv_loss = adv_loss.mean()
             self.optimizer.zero_grad()
@@ -246,19 +238,19 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
             valid_dataloader, fold, tra_len, loss, total_samples, global_step,
             best_score = np.inf):
     
- 
     # validationをはじめる時の値の設定
-    valid_start = cfg.model.valid_start * math.floor(tra_len/cfg.setting.train_batch_size)
+    valid_start = cfg.model.start_valid * math.floor(tra_len/cfg.setting.train_batch_size)
 
     # apexの設定
     if cfg.model.apex:
         scaler = GradScaler(enabled = cfg.model.apex)
 
     # AWPの設定
-    #if cfg.model.use_awp:
-        # Initialize AWP
-    #    awp = AWP(model, optimizer, adv_lr = cfg.adv_lr, adv_eps = cfg.adv_eps, start_step = cfg.start_awp_epoch, scaler = scaler)
+    if cfg.model.use_awp:
+        start_awp = cfg.model.start_awp * math.floor(tra_len/cfg.setting.train_batch_size)
+        awp = AWP(model, optimizer, adv_lr = cfg.adv_lr, adv_eps = cfg.adv_eps, start_step = cfg.start_awp_epoch, scaler = scaler)
 
+    # tqdmの設定
     if cfg.setting.use_tqdm:
         tbar = tqdm(train_dataloader)
     else:
@@ -293,17 +285,11 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
             # Backward
             batch_loss.backward()
             optimizer.step()
-
-
-        #if cfg.model.gradient_accumulations_steps > 1:
-        #    batch_loss = batch_loss / cfg.model.gradient_accumulations_steps
  
-        
-        #if cfg.use_awp and epoch >= cfg.start_awp_epoch:
-            #if epoch == cfg.start_awp_epoch and i == 0:
-                #logging.info(' Start AWP '.center(50, '-'))
-        #    if (i + 1) % cfg.model.gradient_accumulation_steps == 0:
-        #        awp.attack_backward(item, epoch)
+
+        # awpの設定
+        if cfg.use_awp and global_step >= start_awp:
+            awp.attack_backward(item, epoch)
         
 
         # スケジューラーの設定
@@ -328,22 +314,6 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
             tbar.set_description('Batch loss: {:.4f} - Avg loss: {:.4f}'.format(batch_loss, train_loss))
 
 
-        #grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.max_grad_norm)
-        #if (i + 1) % cfg.model.gradient_accumulation_steps == 0:
-        #    scaler.step(optimizer)
-        #    scaler.update()
-        #    scheduler.step()
-        #    optimizer.zero_grad()
-            """
-            if swa_model is not None:
-                swa_model.update_parameters(model)
-                swa_scheduler.step()
-            else:
-                if cfg.batch_scheduler:
-                    scheduler.step()
-            optimizer.zero_grad()
-            """
-
         if (global_step + 1) % cfg.model.valid_frequency == 0 and global_step >= valid_start:
             valid_score = valid_fn(cfg, model, valid_dataloader)
             print(f"Validation Loss : {valid_score}")
@@ -356,10 +326,11 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
                 torch.save(model.state_dict(), model_path)
                 print("Model Saved")
 
-        #del model, optimizer, scheduler
         torch.cuda.empty_cache()
         gc.collect()
     return 
+
+
 
 
 
