@@ -189,7 +189,7 @@ class AWP:
                 input_ids = batch['input_ids'].to(self.cfg.setting.device)
                 attention_mask = batch['attention_mask'].to(self.cfg.setting.device)
                 #token_type_ids = batch['token_type_ids'].to(cfg.setting.device)
-                labels = batch['labels'].to(self.cfg.setting.device)
+                labels = batch['target'].to(self.cfg.setting.device)
                 adv_loss = self.model(input_ids, attention_mask, labels)
                 adv_loss = adv_loss.mean()
             self.optimizer.zero_grad()
@@ -417,6 +417,10 @@ def get_scheduler(cfg, optimizer):
 def prepare_loaders(cfg, fold, df):
     df_train = df[df.kfold != fold].reset_index(drop=True)
     df_valid = df[df.kfold == fold].reset_index(drop=True)
+
+    if cfg.setting.debug:
+        df_train = df_train[50,:]
+        df_valid = df_valid[50,:]
 
     # 学習データ数を取得
     train_len = len(df_train)
