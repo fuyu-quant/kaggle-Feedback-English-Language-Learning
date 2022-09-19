@@ -1,7 +1,7 @@
 setting:
   text : "sample"
   seed : 3655
-  debug : True
+  debug : False
   column : 'cohesion'
   #setting : conventions'
   num_classes : 1
