@@ -76,8 +76,8 @@ class FB3_Dataset(Dataset):
     def __len__(self):
         return len(self.df)
     
-    def __getitem__(self, index):
-        text = self.text['index']
+    def __getitem__(self, idx):
+        text = self.text['idx']
         inputs = self.tokenizer.encode_plus(
                         text,
                         truncation=True,
@@ -88,7 +88,7 @@ class FB3_Dataset(Dataset):
         return {
             'input_ids': inputs['input_ids'],
             'attention_mask': inputs['attention_mask'],
-            'target': self.targets[index]
+            'target': self.targets[idx]
         }
 
 
