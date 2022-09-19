@@ -10,10 +10,11 @@ setting:
   use_tqdm : True
   data_path : "/content/drive/MyDrive/Colab Notebooks/kaggle/Feedback_Prize_3/make_dataset/"
   model_save_path : '/content/drive/MyDrive/Colab Notebooks/kaggle/Feedback_Prize_3/model/'
-  num_epochs : 3
+  num_epochs : 2
   max_length : 512
-  train_batch_size : 4
-  valid_batch_size : 4
+  train_batch_size : 2
+  valid_batch_size : 2
+
 
 wandb:
   project : 'Feedback Prize - English Language Learning'
@@ -21,17 +22,18 @@ wandb:
 
 
 model:
-  model_name: 'microsoft/deberta-base'
-  gradient_checkpointing: False
+  model_name: 'microsoft/deberta-large'
+  gradient_checkpointing: True
   apex : True
   gradient_accumulations_steps : 1
   # apexをTrueにしないとawpは動かない設定になってる
   use_awp : True
-  start_awp : 0.8
+  start_awp : 0.6
   # 1epoch目の何割学習をしてからvalidationを始めるか(0~1)の間で設定
-  start_valid : 0.7
+  start_valid : 0.6
   # 何ミニバッチに1回，validationをするか
-  valid_frequency : 5
+  valid_frequency : 10
+
 
 optimizer:
   optimizer_name: None
@@ -43,6 +45,7 @@ optimizer:
   lr : 1e-6
   eps : None
   betas : None
+
 
 scheduler:
   scheduler_name : None

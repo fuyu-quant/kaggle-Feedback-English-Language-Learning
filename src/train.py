@@ -288,6 +288,7 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
 
         # awpの設定
         if cfg.model.use_awp and global_step >= start_awp:
+            print('AWP start')
             awp.attack_backward(item)
         
 
