@@ -28,9 +28,9 @@ model:
   use_awp : False
   start_awp_epoch : 1
   # 1epoch目の何割学習をしてからvalidationを始めるか(0~1)の間で設定
-  valid_start : 0.2
+  valid_start : 0
   # 何ミニバッチに1回，validationをするか
-  valid_frequency : 10
+  valid_frequency : 100
 
 optimizer:
   optimizer_name: None

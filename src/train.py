@@ -389,8 +389,7 @@ def valid_fn(cfg, model, dataloader):
 
         
         batch_size = input_ids.size(0)
-        valid_loss, output = model(input_ids, attention_mask, target)
-
+        valid_loss = model(input_ids, attention_mask, target)
 
         running_v_loss += (valid_loss.item() * batch_size)
         dataset_v_size += batch_size
