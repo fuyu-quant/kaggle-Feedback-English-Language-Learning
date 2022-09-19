@@ -21,7 +21,7 @@ wandb:
 
 
 model:
-  model_name: 'microsoft/deberta-large'
+  model_name: 'microsoft/deberta-base'
   gradient_checkpointing: False
   apex : True
   gradient_accumulations_steps : 1
