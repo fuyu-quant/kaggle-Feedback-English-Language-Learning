@@ -1,3 +1,5 @@
+# 参考リンク(https://qiita.com/haraso_1130/items/20a50b0474c88781dcc1)
+
 import os
 import gc
 import yaml

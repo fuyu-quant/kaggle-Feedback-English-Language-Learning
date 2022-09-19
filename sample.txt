@@ -1,3 +1,0 @@
-pyyaml
-torch>=1.7.1
-hydra-core
