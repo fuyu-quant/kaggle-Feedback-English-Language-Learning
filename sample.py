@@ -280,8 +280,8 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, valid_da
         with autocast(enabled = cfg.model.apex):
             batch_loss, _ = model(input_ids, attention_mask, target)
 
-        if cfg.model.gradient_accumulation_steps > 1:
-            batch_loss = batch_loss / cfg.gradient_accumulation_steps
+        if cfg.model.gradient_accumulations_steps > 1:
+            batch_loss = batch_loss / cfg.model.gradient_accumulations_steps
 
         # Backward
         scaler.scale(batch_loss).backward()       
