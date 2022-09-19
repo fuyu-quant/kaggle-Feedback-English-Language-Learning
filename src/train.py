@@ -419,8 +419,8 @@ def prepare_loaders(cfg, fold, df):
     df_valid = df[df.kfold == fold].reset_index(drop=True)
 
     if cfg.setting.debug:
-        df_train = df_train[50,:]
-        df_valid = df_valid[50,:]
+        df_train = df_train[:50,:]
+        df_valid = df_valid[:50,:]
 
     # 学習データ数を取得
     train_len = len(df_train)
