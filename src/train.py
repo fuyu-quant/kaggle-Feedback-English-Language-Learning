@@ -246,6 +246,8 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, valid_da
     loss = 0
     total_samples = 0
     global_step = 0
+    # 学習時の累積の損失をサンプル数で割った値
+    train_loss = 0
     #start = end = time.time()
 
     # apexの設定
@@ -309,7 +311,12 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, valid_da
         # Update loss
         loss += batch_loss.item() * batch_size
         total_samples += batch_size
-        wandb.log({"train_loss": loss})
+        train_loss = loss / total_samples
+        wandb.log({"train_loss": train_loss})
+
+        # 学習率の保存
+        L_rate = optimizer.param_groups[0]['lr']
+        wandb.log({"learning_rate": L_rate})
 
         if cfg.setting.use_tqdm:
             tbar.set_description('Batch loss: {:.4f} - Avg loss: {:.4f}'.format(batch_loss, loss / total_samples))
@@ -334,13 +341,13 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, valid_da
 
         if (global_step + 1) % cfg.model.valid_frequency == 0 and global_step >= cfg.model.valid_start:
             valid_score = valid_fn(cfg, model, valid_dataloader)
-            # ミニバッチごとにlossを記録
-            wandb.log({"Valid Loss": valid_score})
+            wandb.log({"Valid score": valid_score})
             print(f"Validation Loss : {valid_score}")
+
             if valid_score <= best_score:
                 print(f"Validation Loss Improved ({best_score} ---> {valid_score})")
                 best_score = valid_score
-                model_path = cfg.setting.model_save_path + f'{cfg.model.model_name}_fold{fold}_{cfg.setting.column}_{cfg.setting.text}.pth'.replace('/', '-')    # モデルの名前に/が入ることがあるため置き換えてる
+                model_path = cfg.setting.model_save_path + f'FB3-{cfg.setting.column}-fold{fold}-{cfg.setting.text}.pth'.replace('/', '-')    # モデルの名前に/が入ることがあるため置き換えてる
                 torch.save(model.state_dict(), model_path)
                 print("Model Saved")
         
@@ -492,11 +499,11 @@ def training_loop(cfg, fold):
 @hydra.main(config_path=".",config_name="config.yaml",version_base=None)
 def main(cfg: DictConfig) -> None:
     fold = cfg.setting.fold
-    run = wandb.init(project=cfg.wandb.project, 
-                     config=cfg,
+    run = wandb.init(project = cfg.wandb.project, 
+                     config = cfg.wandb.yaml_path,
                      job_type='Train',
                      tags= cfg.wandb.tags,
-                     name=f'{cfg.model.model_name}-fold{fold}-{cfg.setting.column}-{cfg.setting.text}',
+                     name = f'FB3-{cfg.setting.column}-fold{fold}-{cfg.setting.text}',
                      anonymous='allow')
     training_loop(cfg, fold)
     run.finish() 

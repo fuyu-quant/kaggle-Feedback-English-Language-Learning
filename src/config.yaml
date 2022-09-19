@@ -18,6 +18,7 @@ setting:
 wandb:
   project : 'Feedback3'
   tags : 'sample'
+  yaml_path : 'config.yaml'
 
 
 model:
