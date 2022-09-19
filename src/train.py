@@ -297,17 +297,9 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
             optimizer.step()
 
 
-        # Forward
-        #with autocast(enabled = cfg.model.apex):
-        #    batch_loss, _ = model(input_ids, attention_mask, target)
-
-        if cfg.model.gradient_accumulations_steps > 1:
-            batch_loss = batch_loss / cfg.model.gradient_accumulations_steps
-
-        # Backward
-        #scaler.scale(batch_loss).backward()
-        #scaler.step(optimizer)
-        #scaler.update()      
+        #if cfg.model.gradient_accumulations_steps > 1:
+        #    batch_loss = batch_loss / cfg.model.gradient_accumulations_steps
+ 
         
         #if cfg.use_awp and epoch >= cfg.start_awp_epoch:
             #if epoch == cfg.start_awp_epoch and i == 0:
@@ -379,13 +371,8 @@ def valid_fn(cfg, model, dataloader):
 
     valid_size = 0
     validation_loss = 0.0
-
-    if cfg.setting.use_tqdm:
-        vbar = tqdm(dataloader)
-    else:
-        vbar = dataloader
     
-    for i, item in enumerate(vbar):
+    for i, item in dataloader:
         input_ids = item['input_ids'].to(cfg.setting.device)
         attention_mask = item['attention_mask'].to(cfg.setting.device)
         #token_type_ids = item['token_type_ids'].to(cfg.device)
@@ -399,12 +386,6 @@ def valid_fn(cfg, model, dataloader):
         valid_size += batch_size
         score = validation_loss / valid_size
 
-        if cfg.setting.use_tqdm:
-            a = vbar.set_description('Batch loss: {:.4f}'.format(score))
-            print("\r"+f'{a}',end="")
-            #print(vbar.set_description('Batch loss: {:.4f}'.format(score)))
-
-        #bar.set_postfix(Valid_Loss=epoch_v_loss)
     torch.cuda.empty_cache()
     gc.collect()
     return score
