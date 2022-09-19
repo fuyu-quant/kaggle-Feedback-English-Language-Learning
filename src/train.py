@@ -482,7 +482,7 @@ def main(cfg: DictConfig) -> None:
                      config = cfg,
                      job_type='Train',
                      tags= cfg.wandb.tags,
-                     name = f'FB3-{cfg.setting.column}-fold{fold}-{cfg.setting.text}',
+                     name = f'{cfg.model.model_name}-{cfg.setting.column}-fold{fold}-{cfg.setting.text}',
                      anonymous='allow')
     training_loop(cfg, fold)
     run.finish() 
