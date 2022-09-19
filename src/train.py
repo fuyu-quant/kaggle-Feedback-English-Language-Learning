@@ -320,8 +320,11 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
         L_rate = optimizer.param_groups[0]['lr']
         wandb.log({"learning_rate": L_rate})
 
+        # epochの保存
+        wandb.log({"epoch": epoch})
+
         if cfg.setting.use_tqdm:
-            tbar.set_description('Batch loss: {:.4f} - Avg loss: {:.4f}'.format(batch_loss, loss / total_samples))
+            tbar.set_description('Batch loss: {:.4f} - Avg loss: {:.4f}'.format(batch_loss, train_loss))
 
 
         #grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.max_grad_norm)
@@ -351,8 +354,10 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
                 model_path = cfg.setting.model_save_path + f'FB3-{cfg.setting.column}-fold{fold}-{cfg.setting.text}.pth'.replace('/', '-')    # モデルの名前に/が入ることがあるため置き換えてる
                 torch.save(model.state_dict(), model_path)
                 print("Model Saved")
-        
-            
+
+        #del model, optimizer, scheduler
+        torch.cuda.empty_cache()
+        gc.collect()
     return 
 
 
@@ -381,11 +386,8 @@ def valid_fn(cfg, model, dataloader):
         score = running_v_loss / dataset_v_size
 
         #bar.set_postfix(Valid_Loss=epoch_v_loss)
-    
-    #del ids, mask, targets, loss
-   #gc.collect()
-    #torch.cuda.empty_cache()
-
+        torch.cuda.empty_cache()
+        gc.collect()
     return score
 
 
