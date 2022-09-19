@@ -97,6 +97,7 @@ class FB3_Dataset(Dataset):
 """ Model """
 class Model(nn.Module):
     def __init__(self, cfg):
+        super(Model, self).__init__()
         self.cfg = cfg
         self.backbone = AutoModel.from_pretrained(self.cfg.model.model_name)
         self.config = AutoConfig.from_pretrained(self.cfg.model.model_name)
