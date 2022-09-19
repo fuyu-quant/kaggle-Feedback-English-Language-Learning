@@ -159,7 +159,7 @@ class Model(nn.Module):
             loss = self.criterion(outputs, label)
         else:
             loss = None
-        return loss #, outputs
+        return loss 
         
 
 
@@ -253,7 +253,8 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
     #start = end = time.time()
 
     # apexの設定
-    scaler = GradScaler(enabled = cfg.model.apex)
+    if cfg.model.apex:
+        scaler = GradScaler(enabled = cfg.model.apex)
 
     # AWPの設定
     #if cfg.model.use_awp:
@@ -280,10 +281,20 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
         batch_size = input_ids.shape[0]
 
         optimizer.zero_grad()
+        if cfg.model.apex:
+            with autocast(enabled = cfg.model.apex):
+                batch_loss = model(input_ids, attention_mask, target)
 
-        batch_loss = model(input_ids, attention_mask, target)
-        batch_loss.backward()
-        optimizer.step()
+            # Backward
+            scaler.scale(batch_loss).backward()
+            scaler.step(optimizer)
+            scaler.update() 
+        
+        else:
+            batch_loss = model(input_ids, attention_mask, target)
+            # Backward
+            batch_loss.backward()
+            optimizer.step()
 
 
         # Forward
@@ -427,10 +438,10 @@ def get_scheduler(cfg, optimizer):
         # start_factor:最初の学習率にかける値
         # end_factor:最後の到達する学習率にするためにかける値
         # 何エポックで到達するかの数値
-        scheduler = lr_scheduler.LinearLR(optimizer, start_factor=1, end_factor=0.1, total_iters=1)
+        scheduler = lr_scheduler.LinearLR(optimizer, start_factor=cfg.scheduler.start_factor, end_factor=cfg.scheduler.end_factor, total_iters=cfg.scheduler.total_iters)
 
     elif cfg.scheduler.scheduler_name == 'Exponential':
-        scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=0.1)
+        scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=cfg.scheduler.gamma)
 
     elif cfg.scheduler.scheduler_name == 'Linear_warmup':
         scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=cfg.scheduler.num_warmup_steps, num_training_steps = cfg.scheduler.num_train_steps)
