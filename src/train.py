@@ -165,23 +165,22 @@ class Model(nn.Module):
 
 """ AWP """
 class AWP:
-    def __init__(self, cfg, model, optimizer, adv_param = 'weight', adv_lr = 1, 
-                adv_eps = 0.2, start_step = 0, adv_step = 1, scaler = None):
+    def __init__(self, cfg, model, optimizer, scaler = None):
         self.cfg = cfg
         self.model = model
         self.optimizer = optimizer
-        self.adv_param = adv_param
-        self.adv_lr = adv_lr
-        self.adv_eps = adv_eps
-        self.start_step = start_step
-        self.adv_step = adv_step
+        self.adv_param = cfg.awp.adv_param
+        self.adv_lr = cfg.awp.adv_lr
+        self.adv_eps = cfg.awp.adv_eps
+        #self.start_step = start_step
+        self.adv_step = cfg.awp.adv_step
         self.backup = {}
         self.backup_eps = {}
         self.scaler = scaler
 
-    def attack_backward(self, batch, epoch):
-        if (self.adv_lr == 0) or (epoch < self.start_step):
-            return None
+    def attack_backward(self, batch):
+        #if (self.adv_lr == 0) or (epoch < self.start_step):
+        #    return None
 
         self._save()
         for i in range(self.adv_step):
@@ -191,7 +190,7 @@ class AWP:
                 attention_mask = batch['attention_mask'].to(self.cfg.setting.device)
                 #token_type_ids = batch['token_type_ids'].to(cfg.setting.device)
                 labels = batch['labels'].to(self.cfg.setting.device)
-                adv_loss, _  = self.model(input_ids, attention_mask, labels)
+                adv_loss = self.model(input_ids, attention_mask, labels)
                 adv_loss = adv_loss.mean()
             self.optimizer.zero_grad()
             self.scaler.scale(adv_loss).backward()
@@ -289,7 +288,7 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
 
         # awpの設定
         if cfg.use_awp and global_step >= start_awp:
-            awp.attack_backward(item, epoch)
+            awp.attack_backward(item)
         
 
         # スケジューラーの設定
