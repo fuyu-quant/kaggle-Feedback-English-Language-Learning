@@ -43,7 +43,7 @@ optimizer:
   # 8bit-optimizerの設定
   bnb_8bit : True
   weight_decay : 0.05
-  lr : 1e-6
+  lr : 1e-7
   eps : None
   betas : None
 
