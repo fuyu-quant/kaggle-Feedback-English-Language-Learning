@@ -357,6 +357,7 @@ def valid_fn(cfg, model, dataloader):
         valid_size += batch_size
         score = validation_loss / valid_size
         
+        del input_ids, attention_mask, target, batch_size, valid_loss
         torch.cuda.empty_cache()
         gc.collect()
     return score
