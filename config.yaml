@@ -1,5 +1,4 @@
 setting:
-  competition_name : 'FeedbackPrize3'
   text : "sample"
   seed : 3655
   column : 'cohesion'
@@ -16,11 +15,15 @@ setting:
   train_batch_size : 1
   valid_batch_size : 8 
 
+wandb:
+  project : 'Feedback3'
+  tags : 'sample'
+
 
 model:
   model_name: 'microsoft/deberta-large'
   gradient_checkpointing: False
-  apex : False
+  apex : True
   gradient_accumulations_steps : 1
   use_awp : False
   start_awp_epoch : 1

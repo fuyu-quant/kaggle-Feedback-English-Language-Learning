@@ -190,12 +190,12 @@ class AWP:
         self._save()
         for i in range(self.adv_step):
             self._attack_step() 
-            with autocast(enabled = cfg.apex):
-                input_ids = batch['input_ids'].to(cfg.device)
-                attention_mask = batch['attention_mask'].to(cfg.device)
-                token_type_ids = batch['token_type_ids'].to(cfg.device)
-                labels = batch['labels'].to(cfg.device)
-                adv_loss, _  = self.model(input_ids, attention_mask, token_type_ids, labels)
+            with autocast(enabled = cfg.model.apex):
+                input_ids = batch['input_ids'].to(cfg.setting.device)
+                attention_mask = batch['attention_mask'].to(cfg.setting.device)
+                token_type_ids = batch['token_type_ids'].to(cfg.setting.device)
+                labels = batch['labels'].to(cfg.setting.device)
+                adv_loss, _  = self.model(input_ids, attention_mask, labels)
                 adv_loss = adv_loss.mean()
             self.optimizer.zero_grad()
             self.scaler.scale(adv_loss).backward()
@@ -482,10 +482,10 @@ def training_loop(cfg, fold):
 @hydra.main(config_path=".",config_name="config.yaml",version_base=None)
 def main(cfg: DictConfig) -> None:
     fold = cfg.setting.fold
-    run = wandb.init(project=cfg.setting.competition_name, 
+    run = wandb.init(project=cfg.wandb.project, 
                      config=cfg,
                      job_type='Train',
-                     tags= cfg.model.model_name,
+                     tags= cfg.wandb.tags,
                      name=f'{cfg.model.model_name}-fold{fold}-{cfg.setting.column}-{cfg.setting.text}',
                      anonymous='allow')
     training_loop(cfg, fold)
