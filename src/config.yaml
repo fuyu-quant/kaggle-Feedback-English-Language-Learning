@@ -13,7 +13,7 @@ setting:
   num_epochs : 3
   max_length : 512
   train_batch_size : 4
-  valid_batch_size : 8
+  valid_batch_size : 4
 
 wandb:
   project : 'Feedback Prize - English Language Learning'
