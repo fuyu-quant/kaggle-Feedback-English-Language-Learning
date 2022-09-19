@@ -117,7 +117,7 @@ class Model(nn.Module):
 
         self._init_weights(self.Linear)
 
-"""
+
     def _init_weights(self, module):
         if isinstance(module, nn.Linear):
             module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
@@ -131,7 +131,7 @@ class Model(nn.Module):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
 
-"""
+
 
     def criterion(self, pred, true):
         loss = nn.MSELoss(pred, true)
