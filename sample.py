@@ -238,8 +238,7 @@ class AWP:
 
 
 """ training function """
-def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, 
-             valid_dataloader, num_fold, best_score = np.inf):
+def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, valid_dataloader, fold, best_score = np.inf):
     '''
     val_df: the validation dataframe after re-organizing
     valid: the validation dataframe before re-organizing
@@ -331,7 +330,7 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
             if valid_score <= best_score:
                 print(f"Validation Loss Improved ({best_score} ---> {valid_score})")
                 best_score = valid_score
-                model_path = cfg.setting.model_save_path + f'{cfg.model.model_name}_fold{num_fold}_{cfg.setting.column}_{cfg.setting.text}.pth'.replace('/', '-')    # モデルの名前に/が入ることがあるため置き換えてる
+                model_path = cfg.setting.model_save_path + f'{cfg.model.model_name}_fold{fold}_{cfg.setting.column}_{cfg.setting.text}.pth'.replace('/', '-')    # モデルの名前に/が入ることがあるため置き換えてる
                 torch.save(model.state_dict(), model_path)
                 print("Model Saved")
         
@@ -462,15 +461,15 @@ def training_loop(cfg, fold):
     #logging.info('Preparing model, optimizer, and scheduler...')
     model = Model(cfg).to(cfg.setting.device)
     optimizer = get_optimizer(cfg, model)
-    num_training_steps = int(len(train_dataloader) * cfg.setting.num_epochs)
+    # cfgに与えたい
+    #num_training_steps = int(len(train_dataloader) * cfg.setting.num_epochs)
     scheduler = get_scheduler(cfg, optimizer)
 
     #best_score = np.inf
 
     for epoch in range(1, cfg.setting.num_epochs + 1): 
-        train_fn(cfg, model, train_dataloader, optimizer, epoch, num_training_steps, scheduler, 
-                                             valid_dataloader, num_fold = fold)
-
+        #train_fn(cfg, model, train_dataloader, optimizer, epoch, num_training_steps, scheduler, valid_dataloader, num_fold = fold)
+        train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, valid_dataloader, fold, best_score = np.inf)
     del model, optimizer, scheduler
     torch.cuda.empty_cache()
     gc.collect()
