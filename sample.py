@@ -135,7 +135,8 @@ class Model(nn.Module):
 
 
     def criterion(self, pred, true):
-        loss = nn.MSELoss(pred, true)
+        MSE_criterion = nn.MSELoss()
+        loss = torch.sqrt(MSE_criterion(pred, true.float()))
         return loss
 
     def forward(self, input_ids, attention_mask, label = None):
