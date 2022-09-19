@@ -313,7 +313,10 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
         if cfg.setting.use_tqdm:
             tbar.set_description('Batch loss: {:.4f} - Avg loss: {:.4f}'.format(batch_loss, train_loss))
 
+        torch.cuda.empty_cache()
+        gc.collect()
 
+        # validationの開始
         if (global_step + 1) % cfg.model.valid_frequency == 0 and global_step >= valid_start:
             valid_score = valid_fn(cfg, model, valid_dataloader)
             print(f"Validation Loss : {valid_score}")
@@ -325,9 +328,8 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
                 model_path = cfg.setting.model_save_path + f'FB3-{cfg.setting.column}-fold{fold}-{cfg.setting.text}.pth'.replace('/', '-')    # モデルの名前に/が入ることがあるため置き換えてる
                 torch.save(model.state_dict(), model_path)
                 print("Model Saved")
-
-        torch.cuda.empty_cache()
-        gc.collect()
+            torch.cuda.empty_cache()
+            gc.collect()
     return 
 
 
