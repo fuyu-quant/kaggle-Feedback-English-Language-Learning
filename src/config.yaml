@@ -13,7 +13,7 @@ setting:
   num_epochs : 3
   max_length : 512
   train_batch_size : 4
-  valid_batch_size : 16
+  valid_batch_size : 8
 
 wandb:
   project : 'Feedback Prize - English Language Learning'
@@ -39,7 +39,7 @@ optimizer:
   # 8bit-optimizerの設定
   bnb_8bit : True
   weight_decay : 0.05
-  lr : 1e-5
+  lr : 1e-6
   eps : None
   betas : None
 
