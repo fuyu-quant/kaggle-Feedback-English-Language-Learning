@@ -250,7 +250,7 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, valid_da
     global_step = 0
     #start = end = time.time()
 
-    if cfg.use_awp:
+    if cfg.model.use_awp:
         # Initialize AWP
         awp = AWP(model, optimizer, adv_lr = cfg.adv_lr, adv_eps = cfg.adv_eps, start_step = cfg.start_awp_epoch, scaler = scaler)
 
