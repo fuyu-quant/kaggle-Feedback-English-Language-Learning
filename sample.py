@@ -239,7 +239,7 @@ class AWP:
 
 """ training function """
 def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, 
-             valid_dataloader, best_score = np.inf, fold = 0):
+             valid_dataloader, fold, best_score = np.inf):
     '''
     val_df: the validation dataframe after re-organizing
     valid: the validation dataframe before re-organizing
@@ -465,11 +465,11 @@ def training_loop(cfg, fold):
     num_training_steps = int(len(train_dataloader) * cfg.setting.num_epochs)
     scheduler = get_scheduler(cfg, optimizer)
 
-    best_score = np.inf
+    #best_score = np.inf
 
     for epoch in range(1, cfg.setting.num_epochs + 1): 
         train_fn(cfg, model, train_dataloader, optimizer, epoch, num_training_steps, scheduler, 
-                                             valid_dataloader, best_score = best_score, fold = fold)
+                                             valid_dataloader, fold = fold)
 
     del model, optimizer, scheduler
     torch.cuda.empty_cache()
