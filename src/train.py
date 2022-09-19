@@ -369,13 +369,8 @@ def valid_fn(cfg, model, dataloader):
 
     valid_size = 0
     validation_loss = 0.0
-
-    if cfg.setting.use_tqdm:
-        vbar = tqdm(dataloader)
-    else:
-        vbar = dataloader
     
-    for i, item in enumerate(vbar):
+    for i, item in enumerate(dataloader):
         input_ids = item['input_ids'].to(cfg.setting.device)
         attention_mask = item['attention_mask'].to(cfg.setting.device)
         #token_type_ids = item['token_type_ids'].to(cfg.device)
