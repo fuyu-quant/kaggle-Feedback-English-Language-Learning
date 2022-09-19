@@ -400,8 +400,7 @@ def valid_fn(cfg, model, dataloader):
         score = validation_loss / valid_size
 
         if cfg.setting.use_tqdm:
-            vbar.set_description('Batch loss: {:.4f}'.format(score))
-            vbar.close()
+            print(vbar.set_description('Batch loss: {:.4f}'.format(score)))
 
         #bar.set_postfix(Valid_Loss=epoch_v_loss)
         torch.cuda.empty_cache()
