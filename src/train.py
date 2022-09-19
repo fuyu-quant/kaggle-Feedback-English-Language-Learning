@@ -4,6 +4,7 @@ import os
 import gc
 import yaml
 import random
+import math
 
 import numpy as np
 import pandas as pd
@@ -241,13 +242,14 @@ class AWP:
 
 
 """ training function """
-def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, valid_dataloader, fold, best_score = np.inf):
+def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, 
+            valid_dataloader, fold, tra_len, loss, total_samples, global_step,
+            best_score = np.inf):
     
-    loss = 0
-    total_samples = 0
-    global_step = 0
+    wandb.log({"epoch": epoch})
+    # validationをはじめる時の値の設定
+    valid_start = cfg.model.valid_start * math.floor(tra_len/cfg.setting.train_batch_size)
     # 学習時の累積の損失をサンプル数で割った値
-    train_loss = 0
     #start = end = time.time()
 
     # apexの設定
@@ -267,6 +269,7 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, valid_da
 
     for i, item in enumerate(tbar):
         model.train()
+        global_step += 1
 
         input_ids = item['input_ids'].to(cfg.setting.device)
         attention_mask = item['attention_mask'].to(cfg.setting.device)
@@ -307,8 +310,7 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, valid_da
             scheduler.step()
 
         
-
-        # Update loss
+        # lossの更新
         loss += batch_loss.item() * batch_size
         total_samples += batch_size
         train_loss = loss / total_samples
@@ -326,7 +328,6 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, valid_da
         #if (i + 1) % cfg.model.gradient_accumulation_steps == 0:
         #    scaler.step(optimizer)
         #    scaler.update()
-        #    global_step += 1
         #    scheduler.step()
         #    optimizer.zero_grad()
             """
@@ -339,7 +340,7 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, valid_da
             optimizer.zero_grad()
             """
 
-        if (global_step + 1) % cfg.model.valid_frequency == 0 and global_step >= cfg.model.valid_start:
+        if (global_step + 1) % cfg.model.valid_frequency == 0 and global_step >= valid_start:
             valid_score = valid_fn(cfg, model, valid_dataloader)
             wandb.log({"Valid score": valid_score})
             print(f"Validation Loss : {valid_score}")
@@ -445,6 +446,9 @@ def get_scheduler(cfg, optimizer):
 def prepare_loaders(cfg, fold, df):
     df_train = df[df.kfold != fold].reset_index(drop=True)
     df_valid = df[df.kfold == fold].reset_index(drop=True)
+
+    # 学習データ数を取得
+    train_len = len(df_train)
     
     train_dataset = FB3_Dataset(cfg, df_train)
     valid_dataset = FB3_Dataset(cfg, df_valid)
@@ -458,7 +462,7 @@ def prepare_loaders(cfg, fold, df):
     valid_loader = DataLoader(valid_dataset, batch_size=cfg.setting.valid_batch_size, collate_fn=collate_fn,
                               num_workers=2, shuffle=False, pin_memory=True)
     
-    return train_loader, valid_loader
+    return train_loader, valid_loader, train_len
 
 
 
@@ -467,13 +471,13 @@ def prepare_loaders(cfg, fold, df):
 def training_loop(cfg, fold):
     #logging.info(f' Fold {fold} '.center(50, '*'))
     set_random_seed(cfg.setting.seed)
-    #set_random_seed(cfg.seed + fold)
+
 
     # データの読み込み
     train_df = pd.read_csv(cfg.setting.data_path + f"{cfg.setting.column}.csv")
     
     #logging.info('Preparing training and validating dataloader...')
-    train_dataloader, valid_dataloader= prepare_loaders(cfg, fold, train_df)
+    train_dataloader, valid_dataloader, tra_len= prepare_loaders(cfg, fold, train_df)
 
     #logging.info('Preparing model, optimizer, and scheduler...')
     model = Model(cfg).to(cfg.setting.device)
@@ -482,11 +486,15 @@ def training_loop(cfg, fold):
     #num_training_steps = int(len(train_dataloader) * cfg.setting.num_epochs)
     scheduler = get_scheduler(cfg, optimizer)
 
-    #best_score = np.inf
+    # 累積する損失の初期値
+    loss = 0
+    total_samples = 0
+    global_step = 0
 
     for epoch in range(1, cfg.setting.num_epochs + 1): 
-        #train_fn(cfg, model, train_dataloader, optimizer, epoch, num_training_steps, scheduler, valid_dataloader, num_fold = fold)
-        train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, valid_dataloader, fold, best_score = np.inf)
+        train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, 
+                valid_dataloader, fold, tra_len, loss, total_samples, global_step,
+                best_score = np.inf)
     del model, optimizer, scheduler
     torch.cuda.empty_cache()
     gc.collect()
@@ -500,7 +508,7 @@ def training_loop(cfg, fold):
 def main(cfg: DictConfig) -> None:
     fold = cfg.setting.fold
     run = wandb.init(project = cfg.wandb.project, 
-                     config = cfg, #.wandb.yaml_path,
+                     config = cfg,
                      job_type='Train',
                      tags= cfg.wandb.tags,
                      name = f'FB3-{cfg.setting.column}-fold{fold}-{cfg.setting.text}',

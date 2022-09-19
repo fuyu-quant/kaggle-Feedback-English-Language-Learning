@@ -16,7 +16,7 @@ setting:
   valid_batch_size : 8 
 
 wandb:
-  project : 'Feedback3'
+  project : 'Feedback Prize - English Language Learning'
   tags : 'sample'
   yaml_path : '/content/GitHub/src/config.yaml'
 
@@ -28,8 +28,10 @@ model:
   gradient_accumulations_steps : 1
   use_awp : False
   start_awp_epoch : 1
-  valid_start : 0
-  valid_frequency : 20
+  # 1epoch目の何割学習をしてからvalidationを始めるか(0~1)の間で設定
+  valid_start : 0.2
+  # 何ミニバッチに1回，validationをするか
+  valid_frequency : 10
 
 optimizer:
   optimizer_name: None
