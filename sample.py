@@ -463,7 +463,7 @@ def training_loop(cfg, fold):
     model = Model(cfg).to(cfg.setting.device)
     optimizer = get_optimizer(cfg, model)
     num_training_steps = int(len(train_dataloader) * cfg.setting.num_epochs)
-    scheduler = get_scheduler(cfg, optimizer, num_training_steps)
+    scheduler = get_scheduler(cfg, optimizer)
 
     best_score = np.inf
 
