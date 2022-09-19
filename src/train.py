@@ -356,8 +356,6 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
 
         if (global_step + 1) % cfg.model.valid_frequency == 0 and global_step >= valid_start:
             valid_score = valid_fn(cfg, model, valid_dataloader)
-            wandb.log({"Valid score": valid_score})
-            print(f"Validation Loss : {valid_score}")
 
             if valid_score <= best_score:
                 print(f"Validation Loss Improved ({best_score} ---> {valid_score})")
@@ -377,11 +375,16 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
 def valid_fn(cfg, model, dataloader):
     model.eval()
 
-    dataset_v_size = 0
-    running_v_loss = 0.0
+    valid_size = 0
+    validation_loss = 0.0
+
+    if cfg.setting.use_tqdm:
+        vbar = tqdm(dataloader)
+    else:
+        vbar = dataloader
     
-    bar = tqdm(enumerate(dataloader), total=len(dataloader))
-    for i, item in bar:
+    #bar = tqdm(enumerate(dataloader), total=len(dataloader))
+    for i, item in enumerate(vbar):
         input_ids = item['input_ids'].to(cfg.setting.device)
         attention_mask = item['attention_mask'].to(cfg.setting.device)
         #token_type_ids = item['token_type_ids'].to(cfg.device)
@@ -391,9 +394,15 @@ def valid_fn(cfg, model, dataloader):
         batch_size = input_ids.size(0)
         valid_loss = model(input_ids, attention_mask, target)
 
-        running_v_loss += (valid_loss.item() * batch_size)
-        dataset_v_size += batch_size
-        score = running_v_loss / dataset_v_size
+        validation_loss += (valid_loss.item() * batch_size)
+        valid_size += batch_size
+        score = validation_loss / valid_size
+
+        if cfg.setting.use_tqdm:
+            vbar.set_description('Batch loss: {:.4f}'.format(score))
+
+        wandb.log({"Valid score": score})
+        print(f"Validation Loss : {score}")
 
         #bar.set_postfix(Valid_Loss=epoch_v_loss)
         torch.cuda.empty_cache()

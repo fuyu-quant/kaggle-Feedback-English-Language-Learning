@@ -12,8 +12,8 @@ setting:
   model_save_path : '/content/drive/MyDrive/Colab Notebooks/kaggle/Feedback_Prize_3/model/'
   num_epochs : 3
   max_length : 512
-  train_batch_size : 1
-  valid_batch_size : 2
+  train_batch_size : 4
+  valid_batch_size : 16
 
 wandb:
   project : 'Feedback Prize - English Language Learning'
