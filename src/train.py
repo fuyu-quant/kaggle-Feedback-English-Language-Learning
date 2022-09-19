@@ -500,7 +500,7 @@ def training_loop(cfg, fold):
 def main(cfg: DictConfig) -> None:
     fold = cfg.setting.fold
     run = wandb.init(project = cfg.wandb.project, 
-                     config = cfg.wandb.yaml_path,
+                     config = cfg, #.wandb.yaml_path,
                      job_type='Train',
                      tags= cfg.wandb.tags,
                      name = f'FB3-{cfg.setting.column}-fold{fold}-{cfg.setting.text}',
