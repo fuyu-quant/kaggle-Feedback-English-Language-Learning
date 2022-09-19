@@ -273,22 +273,22 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, valid_da
 
         optimizer.zero_grad()
 
-        #batch_loss, _ = model(input_ids, attention_mask, target)
-        #loss.backward()
-        #optimizer.step()
+        batch_loss, _ = model(input_ids, attention_mask, target)
+        batch_loss.backward()
+        optimizer.step()
 
 
         # Forward
-        with autocast(enabled = cfg.model.apex):
-            batch_loss, _ = model(input_ids, attention_mask, target)
+        #with autocast(enabled = cfg.model.apex):
+        #    batch_loss, _ = model(input_ids, attention_mask, target)
 
         if cfg.model.gradient_accumulations_steps > 1:
             batch_loss = batch_loss / cfg.model.gradient_accumulations_steps
 
         # Backward
-        scaler.scale(batch_loss).backward()
-        scaler.step(optimizer)
-        scaler.update()      
+        #scaler.scale(batch_loss).backward()
+        #scaler.step(optimizer)
+        #scaler.update()      
         
         #if cfg.use_awp and epoch >= cfg.start_awp_epoch:
             #if epoch == cfg.start_awp_epoch and i == 0:
@@ -296,7 +296,7 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, valid_da
         #    if (i + 1) % cfg.model.gradient_accumulation_steps == 0:
         #        awp.attack_backward(item, epoch)
         
-        
+
         # スケジューラーの設定
         if scheduler is not None:
             scheduler.step()
