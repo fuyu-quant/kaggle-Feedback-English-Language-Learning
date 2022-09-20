@@ -29,7 +29,7 @@ model:
   gradient_accumulations_steps : 1
   # apexをTrueにしないとawpは動かない設定になってる
   use_awp : False
-  start_awp : 0.5
+  start_awp : 0.6
   # 1epoch目の何割学習をしてからvalidationを始めるか(0~1)の間で設定
   start_valid : 0.2
   # 何ミニバッチに1回，validationをするか
