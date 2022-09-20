@@ -29,9 +29,9 @@ model:
   gradient_accumulations_steps : 1
   # apexをTrueにしないとawpは動かない設定になってる
   use_awp : True
-  start_awp : 0.6
+  start_awp : 0.2
   # 1epoch目の何割学習をしてからvalidationを始めるか(0~1)の間で設定
-  start_valid : 0.6
+  start_valid : 0.2
   # 何ミニバッチに1回，validationをするか
   valid_frequency : 20
 
@@ -43,7 +43,7 @@ optimizer:
   # 8bit-optimizerの設定
   bnb_8bit : True
   weight_decay : 0.05
-  lr : 1e-7
+  lr : 1e-6
   eps : None
   betas : None
 
