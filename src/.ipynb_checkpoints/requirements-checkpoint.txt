@@ -1,0 +1,11 @@
+transformers
+sentencepiece
+tqdm
+# 8bit optimizer
+bitsandbytes-cuda112
+# yamlファイルの読み込み
+pyyaml
+# hydra
+hydra-core
+# wandb
+wandb
