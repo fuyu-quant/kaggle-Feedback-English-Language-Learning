@@ -9,7 +9,7 @@ setting:
   fold : 0
   num_folds : 4
   use_tqdm : True
-  data_path : "/opt/ml/input/data/feedback-prize-english-language-learning/cohesion.csv"
+  data_path : "/opt/ml/input/data/train_data/cohesion.csv"
   model_save_path : 's3://fuyu-bucket/feedback-prize-english-language-learning/models/model.pt'
   num_epochs : 2
   max_length : 512

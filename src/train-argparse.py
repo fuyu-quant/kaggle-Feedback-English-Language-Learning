@@ -38,7 +38,7 @@ os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 os.environ['TOKENIZERS_PARALLELISM'] = 'true'
 
 #import sagemaker.debugger
-
+#from smdebug.exceptions import *
 
 """ boto3 """
 import boto3
@@ -53,9 +53,8 @@ wandb.login()
 
 
 
-""" hydra """
-import hydra
-from omegaconf import DictConfig
+""" argparse """
+import argparse
 
 
 
@@ -75,13 +74,13 @@ def set_random_seed(seed, use_cuda = True):
 
 """ Dataset """
 class FB3_Dataset(Dataset):
-    def __init__(self,cfg, df):
-        self.cfg = cfg
+    def __init__(self, opt, df):
+        self.opt = opt
         self.df = df
-        self.max_len = cfg.setting.max_length
-        self.tokenizer = AutoTokenizer.from_pretrained(cfg.model.model_name,  use_fast=True)
+        self.max_len = opt.max_length
+        self.tokenizer = AutoTokenizer.from_pretrained(opt.model_name,  use_fast=True)
         self.text = df['full_text'].values
-        self.targets = df[self.cfg.setting.column].values
+        self.targets = df[opt.column].values
         
     def __len__(self):
         return len(self.df)
@@ -106,18 +105,18 @@ class FB3_Dataset(Dataset):
 
 """ Model """
 class Model(nn.Module):
-    def __init__(self, cfg):
+    def __init__(self, opt):
         super(Model, self).__init__()
-        self.cfg = cfg
-        self.backbone = AutoModel.from_pretrained(self.cfg.model.model_name)
-        self.config = AutoConfig.from_pretrained(self.cfg.model.model_name)
+        self.opt = opt
+        self.backbone = AutoModel.from_pretrained(self.opt.model_name)
+        self.config = AutoConfig.from_pretrained(self.opt.model_name)
         # 新しい単語の追加，https://qiita.com/m__k/items/e620bc14fba7a4e36824
         #self.backbone.resize_token_embeddings(len(cfg.tokenizer))
-        if self.cfg.model.gradient_checkpointing:
+        if self.opt.gradient_checkpointing:
             self.backbone.gradient_checkpointing_enable()
         
 
-        self.Linear = nn.Linear(self.config.hidden_size, self.cfg.setting.num_classes)
+        self.Linear = nn.Linear(self.config.hidden_size, opt.num_classes)
 
         # Multidropout
         self.dropout1 = nn.Dropout(0.1)
@@ -169,11 +168,12 @@ class Model(nn.Module):
         return loss 
         
 
-
+        
 """ AWP """
+"""
 class AWP:
-    def __init__(self, cfg, model, optimizer, scaler = None):
-        self.cfg = cfg
+    def __init__(self, model, optimizer, scaler = None):
+        #self.cfg = cfg
         self.model = model
         self.optimizer = optimizer
         self.adv_param = cfg.awp.adv_param
@@ -235,29 +235,31 @@ class AWP:
         self.backup = {}
         self.backup_eps = {}
 
+"""
+
 
 
 
 
 """ training function """
-def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, 
+def train_fn(opt, model, train_dataloader, optimizer, epoch, scheduler, 
             valid_dataloader, fold, tra_len, loss, total_samples, global_step,
-            best_score = np.inf):
+            best_score):
     
     # validationをはじめる時の値の設定
-    valid_start = cfg.model.start_valid * math.floor(tra_len/cfg.setting.train_batch_size)
+    valid_start = opt.start_valid * math.floor(tra_len/opt.train_batch_size)
 
     # apexの設定
-    if cfg.model.apex:
-        scaler = GradScaler(enabled = cfg.model.apex)
+    if opt.apex:
+        scaler = GradScaler(enabled = opt.apex)
 
     # AWPの設定
-    if cfg.model.use_awp:
-        start_awp = cfg.model.start_awp * math.floor(tra_len/cfg.setting.train_batch_size)
-        awp = AWP(cfg, model, optimizer, scaler = scaler)
+    #if cfg.model.use_awp:
+    #    start_awp = cfg.model.start_awp * math.floor(tra_len/cfg.setting.train_batch_size)
+    #    awp = AWP(cfg, model, optimizer, scaler = scaler)
 
     # tqdmの設定
-    if cfg.setting.use_tqdm:
+    if opt.use_tqdm:
         tbar = tqdm(train_dataloader)
     else:
         tbar = train_dataloader
@@ -268,17 +270,17 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
         model.train()
         global_step += 1
 
-        input_ids = item['input_ids'].to(cfg.setting.device)
-        attention_mask = item['attention_mask'].to(cfg.setting.device)
+        input_ids = item['input_ids'].to(opt.device)
+        attention_mask = item['attention_mask'].to(opt.device)
         # token_type_idsは文のペアを入力する時に使う(https://qiita.com/Dash400air/items/a616ef8d088e003dfd4c)
         #token_type_ids = item['token_type_ids'].to(cfg.device)
-        target = item['target'].to(cfg.setting.device)
+        target = item['target'].to(opt.device)
         
         batch_size = input_ids.shape[0]
 
         optimizer.zero_grad()
-        if cfg.model.apex:
-            with autocast(enabled = cfg.model.apex):
+        if opt.apex:
+            with autocast(enabled = opt.apex):
                 batch_loss = model(input_ids, attention_mask, target)
 
             # Backward
@@ -294,7 +296,7 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
  
 
         # awpの設定
-        if cfg.model.use_awp and global_step >= start_awp:
+        if opt.use_awp and global_step >= start_awp:
             print('AWP start')
             awp.attack_backward(item)
         
@@ -317,25 +319,25 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
         # epochの保存
         wandb.log({"epoch": epoch})
 
-        if cfg.setting.use_tqdm:
+        if opt.use_tqdm:
             tbar.set_description('Batch loss: {:.4f} - Avg loss: {:.4f}'.format(batch_loss, train_loss))
 
         torch.cuda.empty_cache()
         gc.collect()
 
         # validationの開始
-        if (global_step + 1) % cfg.model.valid_frequency == 0 and global_step >= valid_start:
-            valid_score = valid_fn(cfg, model, valid_dataloader)
+        if (global_step + 1) % opt.valid_frequency == 0 and global_step >= valid_start:
+            valid_score = valid_fn(opt, model, valid_dataloader)
             print(f"Validation Loss : {valid_score}")
             wandb.log({"valid_score": valid_score})
 
             if valid_score <= best_score:
                 print(f"Validation Loss Improved ({best_score} ---> {valid_score})")
                 best_score = valid_score
-                model_path = cfg.setting.model_save_path + f'FB3-{cfg.setting.column}-fold{fold}-{cfg.setting.text}.pth'.replace('/', '-')    # モデルの名前に/が入ることがあるため置き換えてる
+                model_path = opt.model_save_path + f'FB3-{opt.column}-fold{fold}-{opt.text}.pth'.replace('/', '-')    # モデルの名前に/が入ることがあるため置き換えてる
                 torch.save(model.state_dict(), '/opt/ml/model/model.pt')
                 # S3に保存
-                bucket.upload_file('/opt/ml/model/model.pt',cfg.setting.model_save_path)
+                bucket.upload_file('/opt/ml/model/model.pt',opt.model_save_path)
                 print("Model Saved")
                 
     return global_step, loss, total_samples, best_score
@@ -345,17 +347,17 @@ def train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler,
 
 
 """ validation function """
-def valid_fn(cfg, model, dataloader):
+def valid_fn(opt, model, dataloader):
     model.eval()
 
     valid_size = 0
     validation_loss = 0.0
     
     for i, item in enumerate(dataloader):
-        input_ids = item['input_ids'].to(cfg.setting.device)
-        attention_mask = item['attention_mask'].to(cfg.setting.device)
-        #token_type_ids = item['token_type_ids'].to(cfg.device)
-        target = item['target'].to(cfg.setting.device)
+        input_ids = item['input_ids'].to(opt.device)
+        attention_mask = item['attention_mask'].to(opt.device)
+        #token_type_ids = item['token_type_ids'].to(opt.device)
+        target = item['target'].to(opt.device)
 
         
         batch_size = input_ids.size(0)
@@ -373,53 +375,53 @@ def valid_fn(cfg, model, dataloader):
 
 """* Optimizer and scheduler"""
 
-def get_optimizer(cfg, model):
-    if cfg.optimizer.all_optimize:
+def get_optimizer(opt,model):
+    if opt.all_optimize:
         optimizer_parameters = model.parameters()
     else:
         #param_optimizer = list(model.named_parameters())
         no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
         optimizer_parameters = [
             {'params': [p for n, p in model.backbone.named_parameters() if not any(nd in n for nd in no_decay)],
-                'lr': cfg.encoder_lr, 'weight_decay': cfg.weight_decay},
+                'lr': opt.encoder_lr, 'weight_decay': opt.weight_decay},
             {'params': [p for n, p in model.backbone.named_parameters() if any(nd in n for nd in no_decay)],
-                'lr': cfg.encoder_lr, 'weight_decay': 0.0},
+                'lr': opt.encoder_lr, 'weight_decay': 0.0},
             {'params': [p for n, p in model.named_parameters() if 'backbone' not in n],
-                'lr': cfg.decoder_lr, 'weight_decay': 0.0}
+                'lr': opt.decoder_lr, 'weight_decay': 0.0}
         ]
-    if cfg.optimizer.bnb_8bit:
-        optimizer = bnb.optim.Adam8bit(optimizer_parameters, lr=cfg.optimizer.lr, weight_decay=cfg.optimizer.weight_decay)
+    if opt.bnb_8bit:
+        optimizer = bnb.optim.Adam8bit(optimizer_parameters, lr=opt.lr, weight_decay=opt.weight_decay)
     else:
-        optimizer = AdamW(optimizer_parameters, lr = cfg.optimizer.lr, eps = cfg.optimizer.eps, betas = cfg.optimizer.betas)
+        optimizer = AdamW(optimizer_parameters, lr = opt.lr)#, eps = opt.eps)
     
     return optimizer
 
 
-def get_scheduler(cfg, optimizer):
-    if cfg.scheduler.scheduler_name == 'CosineAnnealingLR':
-        scheduler = lr_scheduler.CosineAnnealingLR(optimizer,T_max=cfg.scheduler.T_max, eta_min=cfg.scheduler.min_lr)
+def get_scheduler(opt, optimizer):
+#    if cfg.scheduler.scheduler_name == 'CosineAnnealingLR':
+#        scheduler = lr_scheduler.CosineAnnealingLR(optimizer,T_max=cfg.scheduler.T_max, eta_min=cfg.scheduler.min_lr)
 
-    elif cfg.scheduler.scheduler_name == 'CosineAnnealingWarmRestarts':
-        scheduler = lr_scheduler.CosineAnnealingWarmRestarts(optimizer,T_0=cfg.scheduler.T_0, eta_min=cfg.scheduler.min_lr)
+#    elif cfg.scheduler.scheduler_name == 'CosineAnnealingWarmRestarts':
+#        scheduler = lr_scheduler.CosineAnnealingWarmRestarts(optimizer,T_0=cfg.scheduler.T_0, eta_min=cfg.scheduler.min_lr)
 
-    elif cfg.scheduler.scheduler_name == 'Linear':
+#    elif cfg.scheduler.scheduler_name == 'Linear':
         # start_factor:最初の学習率にかける値
         # end_factor:最後の到達する学習率にするためにかける値
         # 何エポックで到達するかの数値
-        scheduler = lr_scheduler.LinearLR(optimizer, start_factor=cfg.scheduler.start_factor, end_factor=cfg.scheduler.end_factor, total_iters=cfg.scheduler.total_iters)
+#        scheduler = lr_scheduler.LinearLR(optimizer, start_factor=cfg.scheduler.start_factor, end_factor=cfg.scheduler.end_factor, total_iters=cfg.scheduler.total_iters)
 
-    elif cfg.scheduler.scheduler_name == 'Exponential':
-        scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=cfg.scheduler.gamma)
+#    elif cfg.scheduler.scheduler_name == 'Exponential':
+#        scheduler = lr_scheduler.ExponentialLR(optimizer, gamma=cfg.scheduler.gamma)
 
-    elif cfg.scheduler.scheduler_name == 'Linear_warmup':
-        scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=cfg.scheduler.num_warmup_steps, num_training_steps = cfg.scheduler.num_train_steps)
+#    elif cfg.scheduler.scheduler_name == 'Linear_warmup':
+#        scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=cfg.scheduler.num_warmup_steps, num_training_steps = cfg.scheduler.num_train_steps)
 
-    elif cfg.scheduler.scheduler_name == 'cosine_warmup':
-        scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=cfg.scheduler.num_warmup_steps, num_training_steps = cfg.scheduler.um_train_steps)
+#    elif cfg.scheduler.scheduler_name == 'cosine_warmup':
+#        scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=cfg.scheduler.num_warmup_steps, num_training_steps = cfg.scheduler.um_train_steps)
 
-    else: 
-        return None      
-    return scheduler
+#    else: 
+#        return None      
+    return None
 
 
 
@@ -428,27 +430,27 @@ def get_scheduler(cfg, optimizer):
 
 
 """ dataloader function """
-def prepare_loaders(cfg, fold, df):
+def prepare_loaders(opt, fold, df):
     df_train = df[df.kfold != fold].reset_index(drop=True)
     df_valid = df[df.kfold == fold].reset_index(drop=True)
 
-    if cfg.setting.debug:
+    if opt.debug:
         df_train = df_train[0:50]
         df_valid = df_valid[0:10]
 
     # 学習データ数を取得
     train_len = len(df_train)
     
-    train_dataset = FB3_Dataset(cfg, df_train)
-    valid_dataset = FB3_Dataset(cfg, df_valid)
+    train_dataset = FB3_Dataset(opt, df_train)
+    valid_dataset = FB3_Dataset(opt, df_valid)
 
-    tokenizer = AutoTokenizer.from_pretrained(cfg.model.model_name,  use_fast=True)
+    tokenizer = AutoTokenizer.from_pretrained(opt.model_name,  use_fast=True)
     # ダイナミックパディングの設定
     collate_fn = DataCollatorWithPadding(tokenizer = tokenizer)
 
-    train_loader = DataLoader(train_dataset, batch_size=cfg.setting.train_batch_size, collate_fn=collate_fn, 
+    train_loader = DataLoader(train_dataset, batch_size=opt.train_batch_size, collate_fn=collate_fn, 
                               num_workers=2, shuffle=True, pin_memory=True, drop_last=True)
-    valid_loader = DataLoader(valid_dataset, batch_size=cfg.setting.valid_batch_size, collate_fn=collate_fn,
+    valid_loader = DataLoader(valid_dataset, batch_size=opt.valid_batch_size, collate_fn=collate_fn,
                               num_workers=2, shuffle=False, pin_memory=True)
     
     return train_loader, valid_loader, train_len
@@ -461,31 +463,33 @@ def prepare_loaders(cfg, fold, df):
 
 
 """ training_loop """ 
-def training_loop(cfg, fold):
+def training_loop(opt, fold):
     #logging.info(f' Fold {fold} '.center(50, '*'))
-    set_random_seed(cfg.setting.seed)
+    set_random_seed(opt.seed)
 
 
     # データの読み込み
-    train_df = pd.read_csv(cfg.setting.data_path)
+    #train_df = pd.read_csv('s3://fuyu-bucket/feedback-prize-english-language-learning/cohesion.csv')
+    train_df = pd.read_csv(opt.data_path)
     
     #logging.info('Preparing training and validating dataloader...')
-    train_dataloader, valid_dataloader, tra_len= prepare_loaders(cfg, fold, train_df)
+    train_dataloader, valid_dataloader, tra_len= prepare_loaders(opt, fold, train_df)
 
     #logging.info('Preparing model, optimizer, and scheduler...')
-    model = Model(cfg).to(cfg.setting.device)
-    optimizer = get_optimizer(cfg, model)
+    model = Model(opt).to(opt.device)
+    optimizer = get_optimizer(opt, model)
     # cfgに与えたい
     #num_training_steps = int(len(train_dataloader) * cfg.setting.num_epochs)
-    scheduler = get_scheduler(cfg, optimizer)
+    scheduler = get_scheduler(opt, optimizer)
 
     # 累積する損失の初期値
     loss = 0
     total_samples = 0
     global_step = 0
+    best_score = np.inf
 
-    for epoch in range(1, cfg.setting.num_epochs + 1): 
-        g_step, epoch_loss, t_samples, b_score = train_fn(cfg, model, train_dataloader, optimizer, epoch, scheduler, 
+    for epoch in range(1, opt.num_epochs + 1): 
+        g_step, epoch_loss, t_samples, b_score = train_fn(opt, model, train_dataloader, optimizer, epoch, scheduler, 
                                 valid_dataloader, fold, tra_len, loss, total_samples, global_step,
                                 best_score)
         global_step = g_step
@@ -504,19 +508,71 @@ def training_loop(cfg, fold):
 
 
 """ main """
-@hydra.main(config_path="/opt/ml/input/data/feedback-prize-english-language-learning/yaml/",config_name="config.yaml",version_base=None)
-def main(cfg: DictConfig) -> None:
-    fold = cfg.setting.fold
-    run = wandb.init(project = cfg.wandb.project, 
-                     config = cfg,
+def main(opt):
+    fold = opt.fold
+    run = wandb.init(project = opt.project, 
+                     #config = cfg,
                      job_type='Train',
-                     tags= cfg.wandb.tags,
-                     name = f'{cfg.model.model_name}-{cfg.setting.column}-fold{fold}-{cfg.setting.text}',
+                     tags= opt.tags,
+                     name = f'{opt.model_name}-{opt.column}-fold{fold}-{opt.text}',
                      anonymous='allow')
-    training_loop(cfg, fold)
+    training_loop(opt,fold)
     run.finish() 
 
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description="sample")
+    
+    parser.add_argument("--text", type=str, default="base_line")
+    parser.add_argument("--seed", type=int, default=3655)
+    parser.add_argument("--debug", type=bool, default=False)
+    parser.add_argument("--column", type=str, default="cohesion")
+    parser.add_argument("--num_classes", type=int, default=1)
+    parser.add_argument("--device", type=str, default = 'cuda:0')
+    parser.add_argument("--fold", type=int, default=0)
+    parser.add_argument("--use_tqdm", type=bool, default=True)
+    parser.add_argument("--data_path", type=str, default="/opt/ml/input/data/train_data/cohesion.csv")
+    parser.add_argument("--model_save_path", type=str, default='s3://fuyu-bucket/feedback-prize-english-language-learning/models/model.pt')
+    parser.add_argument("--num_epochs", type=int, default=2)
+    parser.add_argument("--max_length", type=int, default=512)
+    parser.add_argument("--train_batch_size", type=int, default=1)
+    parser.add_argument("--valid_batch_size", type=int, default=1)
+    
+    parser.add_argument("--project", type=str, default='Feedback Prize - English Language Learning')
+    parser.add_argument("--tags", type=str, default='sample')
+    
+    parser.add_argument("--model_name", type=str, default='microsoft/deberta-large')
+    parser.add_argument("--gradient_checkpointing", type=bool, default=True)
+    parser.add_argument("--apex", type=bool, default=True)
+    parser.add_argument("--gradient_accumulations_steps", type=int, default=1)
+    parser.add_argument("--use_awp", type=bool, default=False)
+    parser.add_argument("--start_awp", type=float, default=0.6)
+    parser.add_argument("--start_valid", type=float, default=0.2)
+    parser.add_argument("--valid_frequency", type=int, default=20)
+    
+    parser.add_argument("--optimizer_name", type=str, default=None)
+    parser.add_argument("--all_optimize", type=bool, default = True)
+    parser.add_argument("--bnb_8bit", type=bool, default = False)
+    parser.add_argument("--weight_decay", type=float, default=0.05)
+    parser.add_argument("--lr", type=float, default=1e-6)
+    parser.add_argument("--eps", type=int, default=None)
+    parser.add_argument("--betas", type=int, default=None)
+    
+    parser.add_argument("--scheduler_name", type=str, default=None)
+    parser.add_argument("--T_max", type=int, default=10)
+    parser.add_argument("--min_lr", type=int, default=10)
+    parser.add_argument("--T_0", type=int, default=10)
+    parser.add_argument("--start_factor", type=int, default=1)
+    parser.add_argument("--end_factor", type=int, default=0.1)
+    parser.add_argument("--total_iters", type=int, default=20)
+    parser.add_argument("--gamma", type=float, default=0.1)
+    
+    parser.add_argument("--adv_lr", type=int, default=1)
+    parser.add_argument("--adv_eps", type=float, default=0.2)
+    parser.add_argument("--adv_param", type=str, default='weight')
+    parser.add_argument("--adv_step", type=int, default=1)
+
+    
+    opt = parser.parse_args()
+    main(opt)
